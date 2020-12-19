@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -252,40 +251,58 @@ func main() {
 	}
 
 	// make markdown format content
-	var tableContent = "## " + *database + " tables message\n"
+	var tableContent = "# " + *database + "\n\n"
+
+	tableContent += "## <span id='toc' name='toc'>目录</span>\n\n| 序号 | 数据库 | 表名称 | 表说明 |\n| :--: | :--- | :--- | :--- |\n"
+
+	for index, table := range tables {
+
+		tableContent += fmt.Sprintf("| %d | %s | [%s](#%s) | %s |\n",
+			index+1,
+			*database,
+			table.Name,
+			table.Name,
+			strings.ReplaceAll(strings.ReplaceAll(table.Comment.String, "|", "\\|"), "\n", ""))
+
+	}
+
+	tableContent += "\n## 表结构\n\n"
+
 	for index, table := range tables {
 		// make content process log
 		fmt.Printf("%d/%d the %s table is making ...\n", index+1, len(tables), table.Name)
 
-		// markdown header title
-		tableContent += "#### " + strconv.Itoa(index+1) + "、 " + table.Name + "\n"
+		tableContent += fmt.Sprintf("### <span id='%s' name='%s'>%s</span>\n\n", table.Name, table.Name, table.Name)
+		tableContent += "- [返回目录](#目录)\n"
+		tableContent += fmt.Sprintf("- 数据库：%s\n", *database)
+		tableContent += fmt.Sprintf("- 表名称：%s\n", table.Name)
 		if table.Comment.String != "" {
-			tableContent += table.Comment.String + "\n"
+			tableContent += "- 表说明：" + strings.ReplaceAll(strings.ReplaceAll(table.Comment.String, "|", "\\|"), "\n", "") + "\n\n"
 		}
 
-		// markdown table header
-		tableContent += "\n" +
-			"| 序号 | 名称 | 描述 | 类型 | 键 | 为空 | 额外 | 默认值 |\n" +
-			"| :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |\n"
+		tableContent += "| 序号 | 名称 | 类型 | 键 | 为空 | 额外 | 默认值 | 描述 |\n| :--: | :--- | :--- | :--: | :--: | :--: | :--: | :--- |\n"
+
 		var columnInfo, columnInfoErr = queryTableColumn(db, *database, table.Name)
 		if columnInfoErr != nil {
 			continue
 		}
+
 		for _, info := range columnInfo {
 			tableContent += fmt.Sprintf(
 				"| %d | `%s` | %s | %s | %s | %s | %s | %s |\n",
 				info.OrdinalPosition,
 				info.ColumnName,
-				strings.ReplaceAll(strings.ReplaceAll(info.ColumnComment.String,"|","\\|"), "\n", ""),
 				info.ColumnType,
 				info.ColumnKey.String,
 				info.IsNullable,
 				info.Extra.String,
 				info.ColumnDefault.String,
+				strings.ReplaceAll(strings.ReplaceAll(info.ColumnComment.String, "|", "\\|"), "\n", ""),
 			)
 		}
-		tableContent += "\n\n"
+		tableContent += "\n"
 	}
+
 	mdFile.WriteString(tableContent)
 
 	// close database and file handler for release
