@@ -303,7 +303,7 @@ func main() {
 		tableContent += "\n"
 	}
 
-	mdFile.WriteString(tableContent)
+	_, _ = mdFile.WriteString(tableContent)
 
 	// close database and file handler for release
 	err = db.Close()
